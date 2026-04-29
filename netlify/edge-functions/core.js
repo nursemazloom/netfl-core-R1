@@ -1,66 +1,66 @@
-const _0xA = (Netlify.env.get("TARGET_DOMAIN") || "").replace(/\/$/, "");
+const A0 = (Netlify.env.get("TARGET_DOMAIN") || "").replace(/\/$/, "");
 
-const _0xB = new Set([
+const B0 = new Set([
   "host","connection","keep-alive","proxy-authenticate","proxy-authorization",
   "te","trailer","transfer-encoding","upgrade","forwarded",
   "x-forwarded-host","x-forwarded-proto","x-forwarded-port"
 ]);
 
-export default async function _0xC(_0xD) {
-  if (!_0xA) return new Response("Service not configured", { status: 500 });
+export default async function Z9(Q1) {
+  if (!A0) return new Response("Service not configured", { status: 500 });
 
   try {
-    const _0xE = new URL(_0xD.url);
-    const _0xF = _0xA + _0xE.pathname + _0xE.search;
-    const _0xG = new Headers();
-    let _0xH = null;
+    const U2 = new URL(Q1.url);
+    const U3 = A0 + U2.pathname + U2.search;
+    const H1 = new Headers();
+    let I0 = null;
 
-    for (const [_0xI, _0xJ] of _0xD.headers) {
-      const _0xK = _0xI.toLowerCase();
+    for (const [K1, V1] of Q1.headers) {
+      const L0 = K1.toLowerCase();
 
-      if (_0xB.has(_0xK)) continue;
-      if (_0xK.startsWith("x-nf-")) continue;
-      if (_0xK.startsWith("x-netlify-")) continue;
+      if (B0.has(L0)) continue;
+      if (L0.startsWith("x-nf-")) continue;
+      if (L0.startsWith("x-netlify-")) continue;
 
-      if (_0xK === "x-real-ip") {
-        _0xH = _0xJ;
+      if (L0 === "x-real-ip") {
+        I0 = V1;
         continue;
       }
 
-      if (_0xK === "x-forwarded-for") {
-        if (!_0xH) _0xH = _0xJ;
+      if (L0 === "x-forwarded-for") {
+        if (!I0) I0 = V1;
         continue;
       }
 
-      _0xG.set(_0xK, _0xJ);
+      H1.set(L0, V1);
     }
 
-    if (_0xH) _0xG.set("x-forwarded-for", _0xH);
+    if (I0) H1.set("x-forwarded-for", I0);
 
-    const _0xL = _0xD.method;
-    const _0xM = {
-      method: _0xL,
-      headers: _0xG,
+    const M0 = Q1.method;
+    const O1 = {
+      method: M0,
+      headers: H1,
       redirect: "manual"
     };
 
-    if (_0xL !== "GET" && _0xL !== "HEAD") {
-      _0xM.body = _0xD.body;
+    if (M0 !== "GET" && M0 !== "HEAD") {
+      O1.body = Q1.body;
     }
 
-    const _0xN = await fetch(_0xF, _0xM);
-    const _0xO = new Headers();
+    const R1 = await fetch(U3, O1);
+    const H2 = new Headers();
 
-    for (const [_0xP, _0xQ] of _0xN.headers) {
-      if (_0xP.toLowerCase() === "transfer-encoding") continue;
-      _0xO.set(_0xP, _0xQ);
+    for (const [K2, V2] of R1.headers) {
+      if (K2.toLowerCase() === "transfer-encoding") continue;
+      H2.set(K2, V2);
     }
 
-    return new Response(_0xN.body, {
-      status: _0xN.status,
-      headers: _0xO
+    return new Response(R1.body, {
+      status: R1.status,
+      headers: H2
     });
-  } catch (_) {
+  } catch {
     return new Response("Service unavailable", { status: 502 });
   }
 }
