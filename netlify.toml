@@ -3,4 +3,4 @@
 
 [[edge_functions]]
   function = "core"
-  path = "/*"
+  path = "/"
