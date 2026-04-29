@@ -1,64 +1,77 @@
-const A0 = (Netlify.env.get("TARGET_DOMAIN") || "").replace(/\/$/, "");
+const CFG = (Netlify.env.get("TARGET_DOMAIN") || "").replace(/\/$/, "");
 
-const B0 = new Set([
-  "host","connection","keep-alive","proxy-authenticate","proxy-authorization",
-  "te","trailer","transfer-encoding","upgrade","forwarded",
-  "x-forwarded-host","x-forwarded-proto","x-forwarded-port"
+const SKIP = new Set([
+  "host",
+  "connection",
+  "keep-alive",
+  "proxy-authenticate",
+  "proxy-authorization",
+  "te",
+  "trailer",
+  "transfer-encoding",
+  "upgrade",
+  "forwarded",
+  "x-forwarded-host",
+  "x-forwarded-proto",
+  "x-forwarded-port",
 ]);
 
-export default async function Z9(Q1) {
-  if (!A0) return new Response("Service not configured", { status: 500 });
+export default async function main(req) {
+  if (!CFG) {
+    return new Response("Service not configured", { status: 500 });
+  }
 
   try {
-    const U2 = new URL(Q1.url);
-    const U3 = A0 + U2.pathname + U2.search;
-    const H1 = new Headers();
-    let I0 = null;
+    const url = new URL(req.url);
+    const target = CFG + url.pathname + url.search;
 
-    for (const [K1, V1] of Q1.headers) {
-      const L0 = K1.toLowerCase();
+    const headers = new Headers();
+    let clientIp = null;
 
-      if (B0.has(L0)) continue;
-      if (L0.startsWith("x-nf-")) continue;
-      if (L0.startsWith("x-netlify-")) continue;
+    for (const [key, value] of req.headers) {
+      const k = key.toLowerCase();
 
-      if (L0 === "x-real-ip") {
-        I0 = V1;
+      if (SKIP.has(k)) continue;
+      if (k.startsWith("x-nf-")) continue;
+      if (k.startsWith("x-netlify-")) continue;
+
+      if (k === "x-real-ip") {
+        clientIp = value;
         continue;
       }
 
-      if (L0 === "x-forwarded-for") {
-        if (!I0) I0 = V1;
+      if (k === "x-forwarded-for") {
+        if (!clientIp) clientIp = value;
         continue;
       }
 
-      H1.set(L0, V1);
+      headers.set(k, value);
     }
 
-    if (I0) H1.set("x-forwarded-for", I0);
+    if (clientIp) headers.set("x-forwarded-for", clientIp);
 
-    const M0 = Q1.method;
-    const O1 = {
-      method: M0,
-      headers: H1,
-      redirect: "manual"
+    const method = req.method;
+    const options = {
+      method,
+      headers,
+      redirect: "manual",
     };
 
-    if (M0 !== "GET" && M0 !== "HEAD") {
-      O1.body = Q1.body;
+    if (method !== "GET" && method !== "HEAD") {
+      options.body = req.body;
     }
 
-    const R1 = await fetch(U3, O1);
-    const H2 = new Headers();
+    const upstream = await fetch(target, options);
 
-    for (const [K2, V2] of R1.headers) {
-      if (K2.toLowerCase() === "transfer-encoding") continue;
-      H2.set(K2, V2);
+    const responseHeaders = new Headers();
+    for (const [key, value] of upstream.headers) {
+      if (key.toLowerCase() === "transfer-encoding") continue;
+      responseHeaders.set(key, value);
     }
 
-    return new Response(R1.body, {
-      status: R1.status,
-      headers: H2
+    return new Response(upstream.body, {
+      status: upstream.status,
+      headers: responseHeaders,
     });
   } catch {
     return new Response("Service unavailable", { status: 502 });
